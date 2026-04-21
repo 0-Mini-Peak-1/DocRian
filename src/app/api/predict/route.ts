@@ -26,6 +26,9 @@ export async function POST(request: Request) {
       const response = await fetch(`${COLAB_API_URL}/predict`, {
         method: 'POST',
         body: colabForm,
+        headers: {
+          'ngrok-skip-browser-warning': '1',
+        },
       });
 
       if (!response.ok) {
