@@ -1,8 +1,12 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Settings, Camera, Leaf, RefreshCw, AlertTriangle, CheckCircle2, Search } from 'lucide-react';
+import { Settings, Camera, Leaf, RefreshCw, AlertTriangle, CheckCircle2, Search, LogOut, User, History } from 'lucide-react';
 import Image from 'next/image';
+import { supabase } from '@/lib/supabase';
+import Auth from '@/components/Auth';
+import SettingsModal from '@/components/SettingsModal';
+import HistorySection from '@/components/HistorySection';
 
 // Types
 type DiseaseCategory = 'healthy' | 'disease' | 'warning';
@@ -16,12 +20,49 @@ interface ScanResult {
 }
 
 export default function Home() {
+  const [session, setSession] = useState<any>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [currentView, setCurrentView] = useState<'scanner' | 'history'>('scanner');
   const [images, setImages] = useState<{ id: string; url: string; file: File }[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<ScanResult[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Clean up object URLs to prevent memory leaks
+  const fetchProfile = async (userId: string) => {
+    const { data } = await supabase.from('profiles').select('avatar_url').eq('id', userId).single();
+    if (data && data.avatar_url) {
+      const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(data.avatar_url);
+      setAvatarUrl(`${publicUrlData.publicUrl}?t=${Date.now()}`);
+    }
+  };
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user?.id) fetchProfile(session.user.id);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session?.user?.id) fetchProfile(session.user.id);
+    });
+
+    const handleProfileUpdate = () => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user?.id) fetchProfile(session.user.id);
+      });
+    };
+    window.addEventListener('profile-updated', handleProfileUpdate);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('profile-updated', handleProfileUpdate);
+    };
+  }, []);
+
   useEffect(() => {
     return () => {
       images.forEach((img) => URL.revokeObjectURL(img.url));
@@ -64,12 +105,11 @@ export default function Home() {
     }
   };
 
-  const startAnalysis = () => {
-    if (images.length === 0) return;
+  const startAnalysis = async () => {
+    if (images.length === 0 || !session?.user?.id) return;
     setIsProcessing(true);
 
-    // Mock Deep Learning Model processing
-    setTimeout(() => {
+    try {
       const mockDiseases = [
         { name: 'Healthy Leaf', category: 'healthy' as DiseaseCategory },
         { name: 'Leaf Blight (Phytophthora)', category: 'disease' as DiseaseCategory },
@@ -77,20 +117,38 @@ export default function Home() {
         { name: 'Yellowing (Nutrient Def)', category: 'warning' as DiseaseCategory },
       ];
 
-      const newResults = images.map((img) => {
+      const newResults = await Promise.all(images.map(async (img) => {
         const randomDisease = mockDiseases[Math.floor(Math.random() * mockDiseases.length)];
+        const confidence = Math.floor(Math.random() * 20) + 80;
+        
+        // 1. Upload to leaf_images storage
+        const fileName = `${session.user.id}-${Date.now()}-${img.file.name}`;
+        await supabase.storage.from('leaf_images').upload(fileName, img.file);
+
+        // 2. Save to scans table
+        await supabase.from('scans').insert({
+          user_id: session.user.id,
+          image_path: fileName,
+          disease_result: randomDisease.name,
+          category: randomDisease.category,
+          confidence: confidence
+        });
+
         return {
           id: img.id,
           url: img.url,
           disease: randomDisease.name,
           category: randomDisease.category,
-          confidence: Math.floor(Math.random() * 20) + 80, // 80-99%
+          confidence,
         };
-      });
+      }));
 
       setResults(newResults);
+    } catch (error) {
+      console.error('Error during analysis:', error);
+    } finally {
       setIsProcessing(false);
-    }, 2500); // simulate 2.5s network delay
+    }
   };
 
   const resetState = () => {
@@ -127,6 +185,10 @@ export default function Home() {
     }
   };
 
+  if (!session) {
+    return <Auth onSignIn={() => supabase.auth.getSession()} />;
+  }
+
   return (
     <div className="app-container">
       <header className="app-header">
@@ -136,120 +198,162 @@ export default function Home() {
           </div>
           <h1 className="logo-text">DocRian</h1>
         </div>
-        <button className="settings-btn" aria-label="Settings">
-          <Settings size={24} />
-        </button>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button 
+            className="settings-btn" 
+            aria-label="Profile Settings" 
+            onClick={() => setIsSettingsOpen(true)}
+            style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--clr-bg-alt)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(0,0,0,0.05)', color: 'var(--clr-primary)', overflow: 'hidden', padding: 0 }}
+          >
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <User size={20} />
+            )}
+          </button>
+        </div>
       </header>
 
-      <main className="app-main">
-        {results.length > 0 ? (
-          <section className="results-section">
-            <div className="results-header">
-              <h2>Diagnosis Results</h2>
-              <button className="btn-outline" onClick={resetState}>
-                <RefreshCw size={16} /> New Scan
-              </button>
-            </div>
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
+        session={session} 
+        onSignOut={() => {
+          setIsSettingsOpen(false);
+          supabase.auth.signOut();
+        }} 
+      />
 
-            <div className="results-container">
-              {(Object.keys(groupedResults) as DiseaseCategory[]).map((category) => (
-                <div key={category} className="category-card">
-                  <div className={`category-header ${category}`}>
-                    <div className={`category-title ${category}`}>
-                      {getCategoryIcon(category)}
-                      {getCategoryTitle(category)}
-                    </div>
-                    <div className="category-badge">
-                      {groupedResults[category].length} item{groupedResults[category].length > 1 ? 's' : ''}
-                    </div>
-                  </div>
-                  
-                  <div className="image-grid">
-                    {groupedResults[category].map((res) => (
-                      <div key={res.id} className="image-item">
-                        {/* Using unoptimized standard img for object URLs */}
-                        <img src={res.url} alt={res.disease} />
-                        <div className="image-confidence">
-                          {res.confidence}% • {res.disease.split(' ')[0]}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : isProcessing ? (
-          <section className="processing-section">
-            <div className="scanner-container">
-              <div className="durian-leaf-mock">
-                <Leaf size={60} />
-              </div>
-              <div className="scanner-line"></div>
-            </div>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', fontWeight: '600' }}>Analyzing Images</h3>
-            <p style={{ color: 'var(--clr-text-muted)', marginBottom: '2rem' }}>
-              Our AI model is examining {images.length} image{images.length > 1 ? 's' : ''}...
-            </p>
-          </section>
-        ) : (
-          <section className="upload-section">
-            <div className="hero-text">
-              <h2>Diagnose your Durian Trees</h2>
-              <p>Upload leaf images or take photos directly to detect diseases instantly with AI.</p>
-            </div>
-
-            <div 
-              className="upload-area"
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <input 
-                type="file" 
-                ref={fileInputRef}
-                className="file-input" 
-                accept="image/*" 
-                multiple 
-                onChange={handleFileChange}
-              />
-              <div className="upload-label">
-                <div className="upload-icon-wrapper">
-                  <div className="upload-icon-ring"></div>
-                  <Camera size={40} />
-                </div>
-                <h3>Tap to Capture or Upload</h3>
-                <p>Select one or multiple leaf photos</p>
-              </div>
-            </div>
-
-            {images.length > 0 && (
-              <div className="preview-section">
-                <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', fontWeight: '500' }}>
-                  {images.length} Image{images.length > 1 ? 's' : ''} Selected
-                </h3>
-                <div className="preview-grid">
-                  {images.slice(0, 4).map((img) => (
-                    <div key={img.id} className="preview-item">
-                      <img src={img.url} alt="Preview" />
-                    </div>
-                  ))}
-                  {images.length > 4 && (
-                    <div className="preview-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--clr-bg-alt)', fontSize: '1.25rem', fontWeight: '600', color: 'var(--clr-primary)' }}>
-                      +{images.length - 4}
-                    </div>
-                  )}
-                </div>
-                
-                <button className="btn-primary" onClick={startAnalysis}>
-                  Analyze Images <RefreshCw size={20} />
+      <main className="app-main" style={{ paddingBottom: '80px' }}>
+        {currentView === 'scanner' ? (
+          results.length > 0 ? (
+            <section className="results-section">
+              <div className="results-header">
+                <h2>Diagnosis Results</h2>
+                <button className="btn-outline" onClick={resetState}>
+                  <RefreshCw size={16} /> New Scan
                 </button>
               </div>
-            )}
-          </section>
+
+              <div className="results-container">
+                {(Object.keys(groupedResults) as DiseaseCategory[]).map((category) => (
+                  <div key={category} className="category-card">
+                    <div className={`category-header ${category}`}>
+                      <div className={`category-title ${category}`}>
+                        {getCategoryIcon(category)}
+                        {getCategoryTitle(category)}
+                      </div>
+                      <div className="category-badge">
+                        {groupedResults[category].length} item{groupedResults[category].length > 1 ? 's' : ''}
+                      </div>
+                    </div>
+                    
+                    <div className="image-grid">
+                      {groupedResults[category].map((res) => (
+                        <div key={res.id} className="image-item">
+                          <img src={res.url} alt={res.disease} />
+                          <div className="image-confidence">
+                            {res.confidence}% • {res.disease.split(' ')[0]}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : isProcessing ? (
+            <section className="processing-section">
+              <div className="scanner-container">
+                <div className="durian-leaf-mock">
+                  <Leaf size={60} />
+                </div>
+                <div className="scanner-line"></div>
+              </div>
+              <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', fontWeight: '600' }}>Analyzing Images</h3>
+              <p style={{ color: 'var(--clr-text-muted)', marginBottom: '2rem' }}>
+                Our AI model is examining {images.length} image{images.length > 1 ? 's' : ''}...
+              </p>
+            </section>
+          ) : (
+            <section className="upload-section">
+              <div className="hero-text">
+                <h2>Diagnose your Durian Trees</h2>
+                <p>Upload leaf images or take photos directly to detect diseases instantly with AI.</p>
+              </div>
+
+              <div 
+                className="upload-area"
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input 
+                  type="file" 
+                  ref={fileInputRef}
+                  className="file-input" 
+                  accept="image/*" 
+                  multiple 
+                  onChange={handleFileChange}
+                />
+                <div className="upload-label">
+                  <div className="upload-icon-wrapper">
+                    <div className="upload-icon-ring"></div>
+                    <Camera size={40} />
+                  </div>
+                  <h3>Tap to Capture or Upload</h3>
+                  <p>Select one or multiple leaf photos</p>
+                </div>
+              </div>
+
+              {images.length > 0 && (
+                <div className="preview-section">
+                  <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', fontWeight: '500' }}>
+                    {images.length} Image{images.length > 1 ? 's' : ''} Selected
+                  </h3>
+                  <div className="preview-grid">
+                    {images.slice(0, 4).map((img) => (
+                      <div key={img.id} className="preview-item">
+                        <img src={img.url} alt="Preview" />
+                      </div>
+                    ))}
+                    {images.length > 4 && (
+                      <div className="preview-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--clr-bg-alt)', fontSize: '1.25rem', fontWeight: '600', color: 'var(--clr-primary)' }}>
+                        +{images.length - 4}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <button className="btn-primary" onClick={startAnalysis}>
+                    Analyze Images <RefreshCw size={20} />
+                  </button>
+                </div>
+              )}
+            </section>
+          )
+        ) : (
+          <HistorySection session={session} />
         )}
       </main>
+
+      {/* Bottom Navigation */}
+      <nav className="bottom-nav">
+        <button 
+          className={`nav-btn ${currentView === 'scanner' ? 'active' : ''}`}
+          onClick={() => setCurrentView('scanner')}
+        >
+          <Camera size={24} />
+          <span>Scanner</span>
+        </button>
+        <button 
+          className={`nav-btn ${currentView === 'history' ? 'active' : ''}`}
+          onClick={() => setCurrentView('history')}
+        >
+          <History size={24} />
+          <span>History</span>
+        </button>
+      </nav>
     </div>
   );
 }

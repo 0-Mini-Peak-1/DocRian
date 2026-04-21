@@ -53,16 +53,14 @@ body {
   opacity: 0.98;
 }
 
-/* Dark Mode Support via Media Query */
-@media (prefers-color-scheme: dark) {
-  :root {
-      --clr-bg: #0f172a;
-      --clr-bg-alt: #1e293b;
-      --clr-surface: #1e293b;
-      --clr-surface-glass: rgba(30, 41, 59, 0.85);
-      --clr-text: #f8fafc;
-      --clr-text-muted: #94a3b8;
-  }
+/* Dark Mode Support via class toggle */
+.dark {
+  --clr-bg: #0f172a;
+  --clr-bg-alt: #1e293b;
+  --clr-surface: #1e293b;
+  --clr-surface-glass: rgba(30, 41, 59, 0.85);
+  --clr-text: #f8fafc;
+  --clr-text-muted: #94a3b8;
 }
 
 /* Utilities */
@@ -78,10 +76,8 @@ body {
   flex-direction: column;
 }
 
-@media (prefers-color-scheme: dark) {
-  .app-container {
-      box-shadow: none;
-  }
+.dark .app-container {
+  box-shadow: none;
 }
 
 /* Header */
@@ -185,10 +181,8 @@ body {
   background: rgba(20, 184, 166, 0.05);
 }
 
-@media (prefers-color-scheme: dark) {
-  .upload-area {
-      border-color: #334155;
-  }
+.dark .upload-area {
+  border-color: #334155;
 }
 
 .file-input {
@@ -479,4 +473,60 @@ body {
   font-size: 0.75rem;
   font-weight: 500;
   text-align: center;
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--clr-surface-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0.75rem 1rem 1.5rem;
+  border-top: 1px solid rgba(0,0,0,0.05);
+  z-index: 100;
+  box-shadow: 0 -4px 6px -1px rgb(0 0 0 / 0.05);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.nav-btn {
+  background: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  color: var(--clr-text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.5rem 1.5rem;
+  border-radius: var(--radius-md);
+}
+
+.nav-btn:hover {
+  color: var(--clr-primary-light);
+  background: rgba(20, 184, 166, 0.05);
+}
+
+.nav-btn.active {
+  color: var(--clr-primary);
+}
+
+.nav-btn.active svg {
+  color: var(--clr-primary);
+  fill: rgba(20, 184, 166, 0.1);
+}
+
+.dark .bottom-nav {
+  border-top: 1px solid rgba(255,255,255,0.05);
+  box-shadow: 0 -4px 6px -1px rgb(0 0 0 / 0.2);
 }
