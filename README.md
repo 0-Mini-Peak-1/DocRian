@@ -73,4 +73,4 @@ DocRian follows a modern cloud-native architecture:
 - **Chawagorn Toomma** (6601398)
 
 ---
-*Develed for CSC472 Artificial Intelligence. Built in Rnagsit University with ❤️ for the Durian Farming Community.*
+*Developed for CSC472 Artificial Intelligence. Built in Rangsit University with ❤️ for the Durian Farming Community.*

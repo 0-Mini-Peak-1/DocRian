@@ -82,14 +82,23 @@ export default function SettingsModal({ isOpen, onClose, session, onSignOut }: S
         });
     }
 
-    // Load theme
-    const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    // Load theme from cookie if available, otherwise fallback to system
+    const getCookie = (name: string) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop()?.split(';').shift();
+      return null;
+    };
+    
+    const savedTheme = getCookie('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     setTheme(savedTheme as 'light' | 'dark');
   }, [isOpen, session]);
 
   const toggleTheme = (newTheme: 'light' | 'dark') => {
     setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
+    // Save to cookie (expires in 1 year)
+    document.cookie = `theme=${newTheme}; path=/; max-age=${60 * 60 * 24 * 365}`;
+    
     if (newTheme === 'dark') {
       document.body.classList.add('dark');
     } else {
