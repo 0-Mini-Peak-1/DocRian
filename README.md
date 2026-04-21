@@ -37,7 +37,7 @@ DocRian is trained to detect several critical durian pathologies:
 
 1. **Clone the repository**:
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/0-Mini-Peak-1/DocRian.git
    cd DocRian
    ```
 
