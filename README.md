@@ -51,6 +51,7 @@ DocRian is trained to detect several critical durian pathologies:
    ```env
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   COLAB_API_URL=in_case_you_run_your_model_in_google_colab
    ```
 
 4. **Database Initialization**:

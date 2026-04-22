@@ -14,6 +14,7 @@ type SortOrder = 'asc' | 'desc';
 export default function HistorySection({ session }: HistorySectionProps) {
   const [scans, setScans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
   
   // States for sorting and filtering
   const [sortField, setSortField] = useState<SortField>('date');
@@ -225,6 +226,14 @@ export default function HistorySection({ session }: HistorySectionProps) {
 
   const handleTouchEnd = () => {
     touchStartX.current = null;
+  };
+
+  const handleRightSideMouseEnter = (id: string) => {
+    setHoveredItemId(id);
+  };
+
+  const handleCardMouseLeave = () => {
+    setHoveredItemId(null);
   };
 
   const closeModal = () => {
@@ -525,22 +534,23 @@ export default function HistorySection({ session }: HistorySectionProps) {
                     onTouchStart={(e) => handleTouchStart(e, scan.id)}
                     onTouchMove={(e) => handleTouchMove(e, scan.id)}
                     onTouchEnd={handleTouchEnd}
+                    onMouseLeave={handleCardMouseLeave}
                   >
-                    {/* Background Delete Button (Revealed on Swipe) */}
+                    {/* Background Delete Button (Revealed on Swipe or Hover) */}
                     <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '80px', background: 'var(--clr-danger)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', zIndex: 0 }}>
-                      <button onClick={() => deleteRecords([scan.id])} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', height: '100%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <button onClick={() => { deleteRecords([scan.id]); setHoveredItemId(null); }} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', height: '100%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Trash2 size={24} />
                       </button>
                     </div>
 
                     {/* Main Card */}
                     <div 
-                      onClick={() => setSelectedImage(scan.publicUrl)}
+                      onClick={() => { setSelectedImage(scan.publicUrl); setHoveredItemId(null); }}
                       style={{ 
                         flex: 1,
                         display: 'flex', gap: '1rem', background: 'var(--clr-surface)', padding: '1rem', 
                         borderRadius: '12px', boxShadow: 'var(--shadow-sm)', alignItems: 'center', zIndex: 1,
-                        transform: swipedItem === scan.id ? 'translateX(-80px)' : 'translateX(0)',
+                        transform: swipedItem === scan.id ? 'translateX(-80px)' : (hoveredItemId === scan.id ? 'translateX(-80px)' : 'translateX(0)'),
                         transition: 'transform 0.3s ease',
                         cursor: 'pointer'
                       }}
@@ -566,6 +576,12 @@ export default function HistorySection({ session }: HistorySectionProps) {
                         </div>
                       </div>
                     </div>
+
+                    {/* Right side hover zone - invisible overlay to detect hover on right side */}
+                    <div 
+                      onMouseEnter={() => handleRightSideMouseEnter(scan.id)}
+                      style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '120px', zIndex: 2, cursor: 'pointer' }}
+                    />
                   </div>
                 ))}
               </div>

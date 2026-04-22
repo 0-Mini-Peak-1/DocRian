@@ -80,6 +80,16 @@ body {
   box-shadow: none;
 }
 
+/* Desktop Support */
+@media (min-width: 1024px) {
+  .app-container {
+    max-width: none;
+    margin: 0;
+    box-shadow: none;
+    flex-direction: row;
+  }
+}
+
 /* Header */
 .app-header {
   display: flex;
@@ -93,6 +103,20 @@ body {
   top: 0;
   z-index: 100;
   border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+/* Desktop Header */
+@media (min-width: 1024px) {
+  .app-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 70px;
+    padding: 0 2rem;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+  }
 }
 
 .logo-container {
@@ -143,6 +167,16 @@ body {
   flex-direction: column;
 }
 
+/* Desktop Main */
+@media (min-width: 1024px) {
+  .app-main {
+    margin-top: 70px;
+    margin-left: 80px;
+    padding: 2.5rem 3rem;
+    max-width: calc(100% - 80px);
+  }
+}
+
 /* Upload Section */
 .hero-text {
   text-align: center;
@@ -159,6 +193,17 @@ body {
 .hero-text p {
   color: var(--clr-text-muted);
   font-size: 0.95rem;
+}
+
+/* Desktop Hero */
+@media (min-width: 1024px) {
+  .hero-text h2 {
+    font-size: 2.2rem;
+  }
+
+  .hero-text p {
+    font-size: 1.05rem;
+  }
 }
 
 .upload-area {
@@ -179,6 +224,14 @@ body {
 .upload-area:hover, .upload-area.dragover {
   border-color: var(--clr-primary-light);
   background: rgba(20, 184, 166, 0.05);
+}
+
+/* Desktop Upload Area */
+@media (min-width: 1024px) {
+  .upload-area {
+    padding: 4rem 2rem;
+    min-height: 300px;
+  }
 }
 
 .dark .upload-area {
@@ -248,6 +301,14 @@ body {
   grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   gap: 0.5rem;
   margin-bottom: 1rem;
+}
+
+/* Desktop Preview Grid */
+@media (min-width: 1024px) {
+  .preview-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 1rem;
+  }
 }
 
 .preview-item {
@@ -389,6 +450,15 @@ body {
   gap: 1.5rem;
 }
 
+/* Desktop Results Container */
+@media (min-width: 1024px) {
+  .results-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    gap: 2rem;
+  }
+}
+
 /* Category Card */
 .category-card {
   background: var(--clr-surface);
@@ -401,6 +471,18 @@ body {
 
 .category-card:hover {
   box-shadow: var(--shadow-md);
+}
+
+/* Desktop Category Card */
+@media (min-width: 1024px) {
+  .category-card {
+    transition: var(--transition);
+  }
+
+  .category-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
+  }
 }
 
 .category-header {
@@ -441,6 +523,15 @@ body {
   grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
   gap: 0.75rem;
   padding: 1.25rem;
+}
+
+/* Desktop Image Grid */
+@media (min-width: 1024px) {
+  .image-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1rem;
+    padding: 1.5rem;
+  }
 }
 
 .image-item {
@@ -495,6 +586,30 @@ body {
   margin: 0 auto;
 }
 
+/* Desktop Bottom Navigation - Convert to Sidebar */
+@media (min-width: 1024px) {
+  .bottom-nav {
+    position: fixed;
+    bottom: auto;
+    top: 70px;
+    left: 0;
+    right: auto;
+    width: 80px;
+    height: calc(100vh - 70px);
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 1.5rem 0;
+    border-top: none;
+    border-right: 1px solid rgba(0,0,0,0.05);
+    border-bottom: none;
+    border-left: none;
+    box-shadow: none;
+    max-width: none;
+    margin: 0;
+    gap: 0.5rem;
+  }
+}
+
 .nav-btn {
   background: none;
   border: none;
@@ -526,7 +641,36 @@ body {
   fill: rgba(20, 184, 166, 0.1);
 }
 
+/* Desktop Nav Button */
+@media (min-width: 1024px) {
+  .nav-btn {
+    padding: 1rem 0.5rem;
+    width: 100%;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.65rem;
+  }
+
+  .nav-btn:hover {
+    background: rgba(20, 184, 166, 0.1);
+  }
+
+  .nav-btn.active {
+    background: rgba(20, 184, 166, 0.15);
+  }
+}
+
+/* Dark Mode - Bottom Navigation */
 .dark .bottom-nav {
   border-top: 1px solid rgba(255,255,255,0.05);
   box-shadow: 0 -4px 6px -1px rgb(0 0 0 / 0.2);
+}
+
+/* Dark Mode - Desktop Sidebar */
+@media (min-width: 1024px) {
+  .dark .bottom-nav {
+    border-top: none;
+    border-right: 1px solid rgba(255,255,255,0.05);
+    box-shadow: none;
+  }
 }
