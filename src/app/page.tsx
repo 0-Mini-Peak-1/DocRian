@@ -139,58 +139,69 @@ export default function Home() {
     if (images.length === 0 || !session?.user?.id) return;
     setIsProcessing(true);
 
-    try {
-      const newResults = await Promise.all(images.map(async (img) => {
-        // Prepare form data for the API
-        const formData = new FormData();
-        formData.append('file', img.file);
+    // ── Concurrency-limited batch runner ──────────────────────────────────────
+    // Promise.all fires ALL requests at once. With 300+ images and a serialized
+    // GPU server (~45ms/image), images queued late wait 10+ seconds → Vercel
+    // function timeout → falls back to "Unknown Error". Cap at 8 concurrent so
+    // every request finishes well within Vercel's 10s timeout.
+    const CONCURRENCY = 8;
 
-        // Call our actual model API
-        let apiResult;
-        try {
-          const response = await fetch('/api/predict', {
-            method: 'POST',
-            body: formData,
-          });
+    const processImage = async (img: { id: string; url: string; file: File }) => {
+      const formData = new FormData();
+      formData.append('file', img.file);
 
-          if (!response.ok) {
-            throw new Error('API request failed');
-          }
+      let apiResult;
+      try {
+        const response = await fetch('/api/predict', {
+          method: 'POST',
+          body: formData,
+        });
 
-          apiResult = await response.json();
-        } catch (err) {
-          console.error("Prediction API error:", err);
-          // Fallback or handle error
-          apiResult = {
-            disease: 'Unknown Error',
-            category: 'warning' as DiseaseCategory,
-            confidence: 0
-          };
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
         }
 
-        // 1. Upload to leaf_images storage
-        const fileName = `${session.user.id}-${Date.now()}-${img.file.name}`;
-        await supabase.storage.from('leaf_images').upload(fileName, img.file);
+        apiResult = await response.json();
+      } catch (err) {
+        console.error(`Prediction API error for ${img.file.name}:`, err);
+        apiResult = {
+          disease: 'Unknown',
+          category: 'warning' as DiseaseCategory,
+          confidence: 0,
+        };
+      }
 
-        // 2. Save to scans table
-        await supabase.from('scans').insert({
+      // Upload image & save scan record in parallel (doesn't block inference)
+      const fileName = `${session.user.id}-${Date.now()}-${img.file.name}`;
+      await Promise.all([
+        supabase.storage.from('leaf_images').upload(fileName, img.file),
+        supabase.from('scans').insert({
           user_id: session.user.id,
           image_path: fileName,
           disease_result: apiResult.disease,
           category: apiResult.category,
-          confidence: Math.round(apiResult.confidence || 0)
-        });
-
-        return {
-          id: img.id,
-          url: img.url,
-          disease: apiResult.disease,
-          category: apiResult.category,
           confidence: Math.round(apiResult.confidence || 0),
-        };
-      }));
+        }),
+      ]);
 
-      setResults(newResults);
+      return {
+        id: img.id,
+        url: img.url,
+        disease: apiResult.disease,
+        category: apiResult.category,
+        confidence: Math.round(apiResult.confidence || 0),
+      };
+    };
+
+    try {
+      // Process images in sliding-window batches of CONCURRENCY
+      const results: ScanResult[] = [];
+      for (let i = 0; i < images.length; i += CONCURRENCY) {
+        const batch = images.slice(i, i + CONCURRENCY);
+        const batchResults = await Promise.all(batch.map(processImage));
+        results.push(...batchResults);
+      }
+      setResults(results);
     } catch (error) {
       console.error('Error during analysis:', error);
     } finally {
