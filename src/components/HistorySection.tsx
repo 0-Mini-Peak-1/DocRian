@@ -526,33 +526,21 @@ export default function HistorySection({ session }: HistorySectionProps) {
                 </button>
               </div>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', overflowX: 'hidden' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {groupedScans[groupKey].map((scan: any) => (
                   <div 
                     key={scan.id} 
-                    style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'stretch' }}
-                    onTouchStart={(e) => handleTouchStart(e, scan.id)}
-                    onTouchMove={(e) => handleTouchMove(e, scan.id)}
-                    onTouchEnd={handleTouchEnd}
-                    onMouseLeave={handleCardMouseLeave}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'var(--clr-surface)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}
                   >
-                    {/* Background Delete Button (Revealed on Swipe or Hover) */}
-                    <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '80px', background: 'var(--clr-danger)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', zIndex: 0 }}>
-                      <button onClick={() => { deleteRecords([scan.id]); setHoveredItemId(null); }} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', height: '100%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Trash2 size={24} />
-                      </button>
-                    </div>
-
-                    {/* Main Card */}
+                    {/* Main Card Content */}
                     <div 
-                      onClick={() => { setSelectedImage(scan.publicUrl); setHoveredItemId(null); }}
+                      onClick={() => setSelectedImage(scan.publicUrl)}
                       style={{ 
                         flex: 1,
-                        display: 'flex', gap: '1rem', background: 'var(--clr-surface)', padding: '1rem', 
-                        borderRadius: '12px', boxShadow: 'var(--shadow-sm)', alignItems: 'center', zIndex: 1,
-                        transform: swipedItem === scan.id ? 'translateX(-80px)' : (hoveredItemId === scan.id ? 'translateX(-80px)' : 'translateX(0)'),
-                        transition: 'transform 0.3s ease',
-                        cursor: 'pointer'
+                        display: 'flex', gap: '1rem', padding: '1rem',
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                        minWidth: 0,
                       }}
                     >
                       <div style={{ width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
@@ -561,27 +549,45 @@ export default function HistorySection({ session }: HistorySectionProps) {
                           {new Date(scan.created_at).toLocaleDateString()}
                         </div>
                       </div>
-                      <div style={{ flex: 1 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
                           <span className={`category-title ${scan.category}`} style={{ fontSize: '1rem', margin: 0, padding: 0, background: 'none' }}>
                             {getCategoryIcon(scan.category)}
                           </span>
-                          <h4 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--clr-text)' }}>{scan.disease_result}</h4>
+                          <h4 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--clr-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{scan.disease_result}</h4>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--clr-text-muted)' }}>Confidence: {scan.confidence}%</p>
-                          <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '4px', background: scan.category === 'healthy' ? '#ecfdf5' : '#fef2f2', color: scan.category === 'healthy' ? '#10b981' : '#ef4444' }}>
+                          <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '4px', background: scan.category === 'healthy' ? '#ecfdf5' : '#fef2f2', color: scan.category === 'healthy' ? '#10b981' : '#ef4444', flexShrink: 0 }}>
                             {scan.category === 'healthy' ? 'Healthy' : 'Disease'}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Right side hover zone - invisible overlay to detect hover on right side */}
-                    <div 
-                      onMouseEnter={() => handleRightSideMouseEnter(scan.id)}
-                      style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '120px', zIndex: 2, cursor: 'pointer' }}
-                    />
+                    {/* Static Delete Button */}
+                    <button
+                      onClick={() => deleteRecords([scan.id])}
+                      title="Delete record"
+                      style={{
+                        flexShrink: 0,
+                        width: '48px',
+                        alignSelf: 'stretch',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'rgba(239, 68, 68, 0.08)',
+                        border: 'none',
+                        borderLeft: '1px solid rgba(239, 68, 68, 0.15)',
+                        color: 'var(--clr-danger)',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s ease',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.18)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
+                    >
+                      <Trash2 size={20} />
+                    </button>
                   </div>
                 ))}
               </div>
